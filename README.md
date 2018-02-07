@@ -1,7 +1,8 @@
 make sure you have OpenCV installed on your system
 
-installation:
 ```
+installation:
+
 $ cmake
 $ make
 ```
@@ -14,3 +15,6 @@ max size: maximum size in pixels of randomly drawn geometry
 refresh rate: after how many succesful iterations the preview is redrawn
 
 ```
+
+result (3s render time):<br>
+![result](https://i.imgur.com/ocfxjfh.png)
