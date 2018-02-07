@@ -63,8 +63,9 @@ int main( int argc, char** argv )
   Mat original;
   original = imread(argv[4], CV_LOAD_IMAGE_COLOR);
 
-  if(!image.data){
+  if(!original.data){
     cout <<  "Could not open or find the image" << endl;
+    displayHelp();
     return -1;
   }
 
