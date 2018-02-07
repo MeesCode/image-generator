@@ -151,19 +151,6 @@ int main( int argc, char** argv )
 
   Mat newCanvas(width, height, CV_8UC3, Scalar::all(255));
 
-  //make images white
-  for(int y = 0; y < height; y++){
-    for(int x = 0; x < width; x++){
-      currentCanvas.data[currentCanvas.channels()*(width*y + x) + 0] = 255;
-      currentCanvas.data[currentCanvas.channels()*(width*y + x) + 1] = 255;
-      currentCanvas.data[currentCanvas.channels()*(width*y + x) + 2] = 255;
-
-      newCanvas.data[newCanvas.channels()*(width*y + x) + 0] = 255;
-      newCanvas.data[newCanvas.channels()*(width*y + x) + 1] = 255;
-      newCanvas.data[newCanvas.channels()*(width*y + x) + 2] = 255;
-    }
-  }
-
   int counter = 0;
 
   int oldDiff = 0;
