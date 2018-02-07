@@ -46,7 +46,7 @@ int max3(int a, int b, int c, int m){
 }
 
 void drawTriangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, int b, int g, int r, const int width, const int height, const int GEOMETRIC_SIZE){
-  //random location
+  // random location
   int ax = (rand() % width) + 1;
   int ay = (rand() % height) + 1;
   int bx = (rand() % GEOMETRIC_SIZE) + ax - GEOMETRIC_SIZE/2 + 1;
@@ -54,7 +54,7 @@ void drawTriangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, in
   int cx = (rand() % GEOMETRIC_SIZE) + ax - GEOMETRIC_SIZE/2 + 1;
   int cy = (rand() % GEOMETRIC_SIZE) + ay - GEOMETRIC_SIZE/2 + 1;
 
-  //draw triangle
+  // draw triangle
   Point rook_points[1][3];
   rook_points[0][0] = Point( ax, ay );
   rook_points[0][1] = Point( bx, by );
@@ -63,7 +63,7 @@ void drawTriangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, in
   int npt[] = { 3 };
   fillPoly(newCanvas, ppt, npt, 1, Scalar( b, r, g ), 8 );
 
-  //define borders for comparison
+  // define borders for comparison
   minY = min3(ay, by, cy, 0);
   maxY = max3(ay, by, cy, height);
   minX = min3(ax, bx, cx, 0);
@@ -71,15 +71,15 @@ void drawTriangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, in
 }
 
 void drawCircle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, int b, int g, int r, const int width, const int height, const int GEOMETRIC_SIZE){
-  //random location
+  // random location
   int cx = (rand() % width) + 1;
   int cy = (rand() % height) + 1;
   int rad = (rand() % GEOMETRIC_SIZE/2) + 1;
 
-  //draw circle
+  // draw circle
   circle(newCanvas, Point(cx, cy), rad, Scalar( b, r, g ), -1, 8, 0);
 
-  //define borders for comparison
+  // define borders for comparison
   minY = max(cy-rad, 0);
   maxY = min(cy+rad, height);
   minX = max(cx-rad, 0);
@@ -87,16 +87,16 @@ void drawCircle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, int 
 }
 
 void drawRectangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, int b, int g, int r, const int width, const int height, const int GEOMETRIC_SIZE){
-  //random location
+  // random location
   int ax = (rand() % width) + 1;
   int ay = (rand() % height) + 1;
   int bx = (rand() % GEOMETRIC_SIZE) + ax - GEOMETRIC_SIZE/2 + 1;
   int by = (rand() % GEOMETRIC_SIZE) + ay - GEOMETRIC_SIZE/2 + 1;
 
-  //draw rectangle
+  // draw rectangle
   rectangle(newCanvas, Point(ax, ay), Point(bx, by), Scalar( b, r, g ), -1, 8, 0);
 
-  //define borders for comparison
+  // define borders for comparison
   minY = min2(ay, by, 0);
   maxY = max2(ay, by, height);
   minX = min2(ax, bx, 0);
@@ -104,20 +104,75 @@ void drawRectangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, i
 }
 
 void drawLine(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, int b, int g, int r, const int width, const int height, const int GEOMETRIC_SIZE){
-  //random location
+  // random location
   int ax = (rand() % width) + 1;
   int ay = (rand() % height) + 1;
   int bx = (rand() % GEOMETRIC_SIZE) + ax - GEOMETRIC_SIZE/2 + 1;
   int by = (rand() % GEOMETRIC_SIZE) + ay - GEOMETRIC_SIZE/2 + 1;
 
-  //draw line
+  // draw line
   line(newCanvas, Point(ax, ay), Point(bx, by), Scalar( b, r, g ), 1, 8, 0);
 
-  //define borders for comparison
-  minY = min2(ay, by, 0);
-  maxY = max2(ay, by, height);
-  minX = min2(ax, bx, 0);
-  maxX = max2(ax, bx, width);
+  // define borders for comparison
+  // return points instead of boundary since we are using a line iterator
+  minX = ax;
+  minY = ay;
+  maxX = bx;
+  maxY = by;
+}
+
+void generalCompare(Mat &original, Mat &currentCanvas, Mat &newCanvas, int minX, int maxX, int minY, int maxY, const int width, int &oldDiff, int &newDiff){
+  for(int y = minY; y < maxY; y++){
+    for(int x = minX; x <maxX; x++){
+      uchar original_b = original.data[original.channels()*(width*y + x) + 0];
+      uchar original_g = original.data[original.channels()*(width*y + x) + 1];
+      uchar original_r = original.data[original.channels()*(width*y + x) + 2];
+
+      uchar new_b = newCanvas.data[newCanvas.channels()*(width*y + x) + 0];
+      uchar new_g = newCanvas.data[newCanvas.channels()*(width*y + x) + 1];
+      uchar new_r = newCanvas.data[newCanvas.channels()*(width*y + x) + 2];
+
+      uchar current_b = currentCanvas.data[currentCanvas.channels()*(width*y + x) + 0];
+      uchar current_g = currentCanvas.data[currentCanvas.channels()*(width*y + x) + 1];
+      uchar current_r = currentCanvas.data[currentCanvas.channels()*(width*y + x) + 2];
+
+      // distance current and original
+      oldDiff += sqrt(pow(original_b - current_b, 2) + pow(original_g - current_g, 2) + pow(original_r - current_r, 2));
+
+      // distance new and original
+      newDiff += sqrt(pow(original_b - new_b, 2) + pow(original_g - new_g, 2) + pow(original_r - new_r, 2));
+    }
+  }
+}
+
+void lineCompare(Mat &original, Mat &currentCanvas, Mat &newCanvas, int minX, int maxX, int minY, int maxY, const int width, int &oldDiff, int &newDiff){
+
+  LineIterator it(original, Point(minX, minY), Point(maxX, maxY), 8);
+
+  for(int i = 0; i < it.count; i++, ++it){
+
+    Point pt = it.pos();
+    int x = pt.x;
+    int y = pt.y;
+
+    uchar original_b = original.data[original.channels()*(width*y + x) + 0];
+    uchar original_g = original.data[original.channels()*(width*y + x) + 1];
+    uchar original_r = original.data[original.channels()*(width*y + x) + 2];
+
+    uchar new_b = newCanvas.data[newCanvas.channels()*(width*y + x) + 0];
+    uchar new_g = newCanvas.data[newCanvas.channels()*(width*y + x) + 1];
+    uchar new_r = newCanvas.data[newCanvas.channels()*(width*y + x) + 2];
+
+    uchar current_b = currentCanvas.data[currentCanvas.channels()*(width*y + x) + 0];
+    uchar current_g = currentCanvas.data[currentCanvas.channels()*(width*y + x) + 1];
+    uchar current_r = currentCanvas.data[currentCanvas.channels()*(width*y + x) + 2];
+
+    // distance current and original
+    oldDiff += sqrt(pow(original_b - current_b, 2) + pow(original_g - current_g, 2) + pow(original_r - current_r, 2));
+
+    // distance new and original
+    newDiff += sqrt(pow(original_b - new_b, 2) + pow(original_g - new_g, 2) + pow(original_r - new_r, 2));
+  }
 }
 
 int main( int argc, char** argv )
@@ -134,7 +189,7 @@ int main( int argc, char** argv )
   const int GEOMETRIC_SIZE = atoi(argv[2]);
   const int refresh = atoi(argv[3]);
 
-  //original image
+  // original image
   Mat original;
   original = imread(argv[4], CV_LOAD_IMAGE_COLOR);
 
@@ -148,7 +203,6 @@ int main( int argc, char** argv )
   const int height = original.rows;
 
   Mat currentCanvas(width, height, CV_8UC3, Scalar::all(255));
-
   Mat newCanvas(width, height, CV_8UC3, Scalar::all(255));
 
   int counter = 0;
@@ -160,63 +214,47 @@ int main( int argc, char** argv )
 
   int r, g, b;
 
-  void (*fp)(Mat&, int&, int&, int&, int&, int, int, int, const int, const int, const int);
+  void (*drawFunction)(Mat&, int&, int&, int&, int&, int, int, int, const int, const int, const int);
+  void (*compareFunction)(Mat&, Mat&, Mat&, int, int, int, int, const int, int&, int&);
+
+  compareFunction = &generalCompare;
 
   if(typeString == "triangle"){
-    fp = &drawTriangle;
+    drawFunction = &drawTriangle;
   } else if(typeString == "circle"){
-    fp = &drawCircle;
-  } else if(typeString == "square"){
-    fp = &drawRectangle;
+    drawFunction = &drawCircle;
+  } else if(typeString == "rectangle"){
+    drawFunction = &drawRectangle;
   } else if(typeString == "line"){
-    fp = &drawLine;
+    compareFunction = &lineCompare;
+    drawFunction = &drawLine;
   } else {
     cout <<  "Not a valid type" << endl;
     displayHelp();
     return -1;
   }
 
-  //main loop
+  // main loop
   while(1){
 
-    //random color
+    // random color
     b = (rand() % 255) + 1;
     g = (rand() % 255) + 1;
     r = (rand() % 255) + 1;
 
-    fp(newCanvas, minX, maxX, minY, maxY, b, g, r, width, height, GEOMETRIC_SIZE);
+    drawFunction(newCanvas, minX, maxX, minY, maxY, b, g, r, width, height, GEOMETRIC_SIZE);
 
     newDiff = 0;
     oldDiff = 0;
 
-    //compare images
-    for(int y = minY; y < maxY; y++){
-      for(int x = minX; x <maxX; x++){
-        uchar original_b = original.data[original.channels()*(width*y + x) + 0];
-        uchar original_g = original.data[original.channels()*(width*y + x) + 1];
-        uchar original_r = original.data[original.channels()*(width*y + x) + 2];
-
-        uchar new_b = newCanvas.data[newCanvas.channels()*(width*y + x) + 0];
-        uchar new_g = newCanvas.data[newCanvas.channels()*(width*y + x) + 1];
-        uchar new_r = newCanvas.data[newCanvas.channels()*(width*y + x) + 2];
-
-        uchar current_b = currentCanvas.data[currentCanvas.channels()*(width*y + x) + 0];
-        uchar current_g = currentCanvas.data[currentCanvas.channels()*(width*y + x) + 1];
-        uchar current_r = currentCanvas.data[currentCanvas.channels()*(width*y + x) + 2];
-
-        //distance current and original
-        oldDiff += sqrt(pow(original_b - current_b, 2) + pow(original_g - current_g, 2) + pow(original_r - current_r, 2));
-
-        //distance new and original
-        newDiff += sqrt(pow(original_b - new_b, 2) + pow(original_g - new_g, 2) + pow(original_r - new_r, 2));
-      }
-    }
+    // compare images
+    compareFunction(original, currentCanvas, newCanvas, minX, maxX, minY, maxY, width, oldDiff, newDiff);
 
     if(oldDiff > newDiff){
       currentCanvas = newCanvas.clone();
       counter++;
 
-      //show
+      // show
       if(counter >= refresh){
         namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display.
         imshow( "Display window", currentCanvas );
