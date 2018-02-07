@@ -2,6 +2,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <cstdlib>
+#include <unistd.h>
 #include <ctime>
 #include <math.h>
 #include <algorithm>
@@ -12,11 +13,18 @@ using namespace cv;
 using namespace std;
 
 void displayHelp(){
-  cout << "Usage: imageGenerator [type] [max size] [refresh rate] [path to image]" << endl;
-  cout << endl;
-  cout << "type: { rectangle, triangle, circle, line }" << endl;
-  cout << "max size: maximum size in pixels of randomly drawn geometry" << endl;
-  cout << "refresh rate: after how many succesful iterations the preview is redrawn" << endl;
+  cout << "Usage: imageGenerator [option] [parameter] [path]\n" << endl;
+  cout << "options:" << endl;
+  cout << "-t: \"rectangle\", \"triangle\", \"circle\", \"line\"" << endl;
+  cout << "\twhich shapes will be randomly generated" << endl;
+  cout << "\tdefault: triangle\n" << endl;
+  cout << "-s: maximum size in pixels of randomly drawn geometry" << endl;
+  cout << "\tdefault: 50\n" << endl;
+  cout << "-r: after how many succesful iterations the preview is redrawn" << endl;
+  cout << "\tdefault: 50\n" << endl;
+  cout << "-c: colorspace" << endl;
+  cout << "\t0: black and white\n\t1: grayscale\n\t2: full color" << endl;
+  cout << "\tdefault: 2" << endl;
 }
 
 int min2(int a, int b, int m){
@@ -45,7 +53,27 @@ int max3(int a, int b, int c, int m){
   int r = max2(a, max(b, c), m);
 }
 
-void drawTriangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, int b, int g, int r, const int width, const int height, const int GEOMETRIC_SIZE){
+Scalar getColor(){
+  // random color
+  int b = (rand() % 255) + 1;
+  int g = (rand() % 255) + 1;
+  int r = (rand() % 255) + 1;
+
+  return Scalar(b, r, g);
+}
+
+Scalar getGrayScale(){
+  // random color
+  int g = (rand() % 255) + 1;
+
+  return Scalar(g, g, g);
+}
+
+Scalar getBlack(){
+  return Scalar(0, 0, 0);
+}
+
+void drawTriangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, Scalar color, const int width, const int height, const int GEOMETRIC_SIZE){
   // random location
   int ax = (rand() % width) + 1;
   int ay = (rand() % height) + 1;
@@ -61,7 +89,7 @@ void drawTriangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, in
   rook_points[0][2] = Point( cx, cy );
   const Point* ppt[1] = { rook_points[0] };
   int npt[] = { 3 };
-  fillPoly(newCanvas, ppt, npt, 1, Scalar( b, r, g ), 8 );
+  fillPoly(newCanvas, ppt, npt, 1, color, 8 );
 
   // define borders for comparison
   minY = min3(ay, by, cy, 0);
@@ -70,14 +98,14 @@ void drawTriangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, in
   maxX = max3(ax, bx, cx, width);
 }
 
-void drawCircle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, int b, int g, int r, const int width, const int height, const int GEOMETRIC_SIZE){
+void drawCircle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, Scalar color, const int width, const int height, const int GEOMETRIC_SIZE){
   // random location
   int cx = (rand() % width) + 1;
   int cy = (rand() % height) + 1;
   int rad = (rand() % GEOMETRIC_SIZE/2) + 1;
 
   // draw circle
-  circle(newCanvas, Point(cx, cy), rad, Scalar( b, r, g ), -1, 8, 0);
+  circle(newCanvas, Point(cx, cy), rad, color, -1, 8, 0);
 
   // define borders for comparison
   minY = max(cy-rad, 0);
@@ -86,7 +114,7 @@ void drawCircle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, int 
   maxX = min(cx+rad, width);
 }
 
-void drawRectangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, int b, int g, int r, const int width, const int height, const int GEOMETRIC_SIZE){
+void drawRectangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, Scalar color, const int width, const int height, const int GEOMETRIC_SIZE){
   // random location
   int ax = (rand() % width) + 1;
   int ay = (rand() % height) + 1;
@@ -94,7 +122,7 @@ void drawRectangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, i
   int by = (rand() % GEOMETRIC_SIZE) + ay - GEOMETRIC_SIZE/2 + 1;
 
   // draw rectangle
-  rectangle(newCanvas, Point(ax, ay), Point(bx, by), Scalar( b, r, g ), -1, 8, 0);
+  rectangle(newCanvas, Point(ax, ay), Point(bx, by), color, -1, 8, 0);
 
   // define borders for comparison
   minY = min2(ay, by, 0);
@@ -103,7 +131,7 @@ void drawRectangle(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, i
   maxX = max2(ax, bx, width);
 }
 
-void drawLine(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, int b, int g, int r, const int width, const int height, const int GEOMETRIC_SIZE){
+void drawLine(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, Scalar color, const int width, const int height, const int GEOMETRIC_SIZE){
   // random location
   int ax = (rand() % width) + 1;
   int ay = (rand() % height) + 1;
@@ -111,7 +139,7 @@ void drawLine(Mat &newCanvas, int &minX, int &maxX, int &minY, int &maxY, int b,
   int by = (rand() % GEOMETRIC_SIZE) + ay - GEOMETRIC_SIZE/2 + 1;
 
   // draw line
-  line(newCanvas, Point(ax, ay), Point(bx, by), Scalar( b, r, g ), 1, 8, 0);
+  line(newCanvas, Point(ax, ay), Point(bx, by), color, 1, 8, 0);
 
   // define borders for comparison
   // return points instead of boundary since we are using a line iterator
@@ -175,23 +203,73 @@ void lineCompare(Mat &original, Mat &currentCanvas, Mat &newCanvas, int minX, in
   }
 }
 
-int main( int argc, char** argv )
-{
+int main( int argc, char** argv ){
 
-  if(argc != 5){
-    cout <<  "Not the correct amount of arguments" << endl;
+  string typeString = "triangle";
+  int color = 2;
+  int refresh = 50;
+  int GEOMETRIC_SIZE = 50;
+  string imagePath = "";
+  int c;
+
+  while(optind < argc){
+    if((c = getopt(argc, argv, "t:c:s:r:")) != -1){
+      switch (c){
+        case 't':
+          typeString = string(optarg);
+          break;
+        case 'c':
+          color = atoi(optarg);
+          break;
+        case 's':
+          GEOMETRIC_SIZE = atoi(optarg);
+          break;
+        case 'r':
+          refresh = atoi(optarg);
+          break;
+        case '?':
+          cout << "Option -" << optopt << " requires an argument." << endl;
+          return -1;
+        default:
+          displayHelp();
+          return -1;
+      }
+    }
+    else {
+      imagePath = string(argv[optind]);
+      optind++;
+    }
+  }
+
+  if(imagePath == ""){
+    cout << "No image path given" << endl;
     displayHelp();
     return -1;
   }
 
+  Scalar (*colorFunction)();
+
+  switch(color){
+    case 0:
+      colorFunction = &getBlack;
+      break;
+    case 1:
+      colorFunction = &getGrayScale;
+      break;
+    case 2:
+      colorFunction = &getColor;
+      break;
+    default:
+      cout << "Not a valid colorspace" << endl;
+      displayHelp();
+      return -1;
+  }
+
   srand((int)time(0));
-  const string typeString = string(argv[1]);
-  const int GEOMETRIC_SIZE = atoi(argv[2]);
-  const int refresh = atoi(argv[3]);
 
   // original image
   Mat original;
-  original = imread(argv[4], CV_LOAD_IMAGE_COLOR);
+  original = imread(imagePath, CV_LOAD_IMAGE_COLOR);
 
   if(!original.data){
     cout <<  "Could not open or find the image" << endl;
@@ -212,9 +290,7 @@ int main( int argc, char** argv )
 
   int minX, maxX, minY, maxY;
 
-  int r, g, b;
-
-  void (*drawFunction)(Mat&, int&, int&, int&, int&, int, int, int, const int, const int, const int);
+  void (*drawFunction)(Mat&, int&, int&, int&, int&, Scalar, const int, const int, const int);
   void (*compareFunction)(Mat&, Mat&, Mat&, int, int, int, int, const int, int&, int&);
 
   compareFunction = &generalCompare;
@@ -237,12 +313,7 @@ int main( int argc, char** argv )
   // main loop
   while(1){
 
-    // random color
-    b = (rand() % 255) + 1;
-    g = (rand() % 255) + 1;
-    r = (rand() % 255) + 1;
-
-    drawFunction(newCanvas, minX, maxX, minY, maxY, b, g, r, width, height, GEOMETRIC_SIZE);
+    drawFunction(newCanvas, minX, maxX, minY, maxY, colorFunction(), width, height, GEOMETRIC_SIZE);
 
     newDiff = 0;
     oldDiff = 0;
